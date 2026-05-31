@@ -1,0 +1,13 @@
+# Backend
+backend/.env
+backend/str-leads
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Claude Code local config
+.claude/
+
+# OS
+.DS_Store
