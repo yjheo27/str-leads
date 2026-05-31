@@ -61,6 +61,7 @@ describe('InputPanel', () => {
 
   it('shows error message when API call fails', async () => {
     const { scrapeLead } = await import('../lib/api')
+
     vi.mocked(scrapeLead).mockRejectedValueOnce(new Error('Server error'))
 
     render(<InputPanel onSuccess={onSuccess} />)
