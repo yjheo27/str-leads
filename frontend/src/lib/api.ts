@@ -8,6 +8,7 @@ export type Lead = {
   address: string | null
   strategy: 'Rent Arbitrage' | 'STR Management' | 'Unassigned'
   status: 'New' | 'Contacted' | 'No Answer'
+  notes: string | null
   created_at: string
 }
 
@@ -44,4 +45,25 @@ export async function updateStatus(id: string, status: string): Promise<Lead> {
     throw new Error(err.error || 'Failed to update status')
   }
   return res.json()
+}
+
+export async function updateNotes(id: string, notes: string): Promise<Lead> {
+  const res = await fetch(`${BASE}/api/leads/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notes }),
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.error || 'Failed to update notes')
+  }
+  return res.json()
+}
+
+export async function deleteLead(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/leads/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.error || 'Failed to delete lead')
+  }
 }

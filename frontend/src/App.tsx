@@ -27,6 +27,14 @@ export default function App() {
     setLeads(prev => prev.map(l => l.id === id ? { ...l, status: status as Lead['status'] } : l))
   }
 
+  function onNotesChange(id: string, notes: string | null) {
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, notes } : l))
+  }
+
+  function onDelete(id: string) {
+    setLeads(prev => prev.filter(l => l.id !== id))
+  }
+
   const filteredLeads = useMemo(() => {
     const q = search.toLowerCase()
     return leads.filter(l => {
@@ -69,7 +77,12 @@ export default function App() {
                   onStatus={setFilterStatus}
                   onExport={() => exportCSV(filteredLeads)}
                 />
-                <LeadsTable leads={filteredLeads} onStatusChange={onStatusChange} />
+                <LeadsTable
+                  leads={filteredLeads}
+                  onStatusChange={onStatusChange}
+                  onNotesChange={onNotesChange}
+                  onDelete={onDelete}
+                />
               </>
           }
         </div>

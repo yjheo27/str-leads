@@ -10,5 +10,6 @@ type Lead struct {
 	Address   *string   `json:"address"`
 	Strategy  string    `json:"strategy"`
 	Status    string    `json:"status"`
+	Notes     *string   `json:"notes"`
 	CreatedAt time.Time `json:"created_at"`
 }

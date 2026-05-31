@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS leads (
 	strategy    TEXT NOT NULL DEFAULT 'Unassigned',
 	status      TEXT NOT NULL DEFAULT 'New',
 	created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);`
+);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS notes TEXT;`
 
 func Connect() error {
 	dsn := os.Getenv("DATABASE_URL")
