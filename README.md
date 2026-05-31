@@ -38,11 +38,24 @@ This starts a PostgreSQL 16 instance on port 5432. The `leads` table is created 
 cp backend/.env.example backend/.env
 ```
 
-Open `backend/.env` and paste your Anthropic API key:
+The app works out of the box in **stub mode** — every submission returns a fake lead with rotating strategy classifications so you can test the full UI and database flow without an API key. No changes needed to run it this way.
 
-```
-ANTHROPIC_API_KEY=sk-ant-...
-```
+To enable **real Claude AI extraction**, see the note below.
+
+### Note on the Claude API key
+
+The `ANTHROPIC_API_KEY` field in `backend/.env` is what switches the app from stub mode to live AI extraction.
+
+- **Without a key (default):** `backend/llm/claude.go` returns hardcoded dummy data. The full frontend → backend → database flow works, but extracted contact details and strategy classifications are fake.
+- **With a key:** the backend calls `https://api.anthropic.com/v1/messages`, Claude reads the actual listing text, and returns real structured data. Each extraction costs a fraction of a cent.
+
+To enable it:
+1. Get a key at [console.anthropic.com](https://console.anthropic.com) (requires a separate account from Claude.ai — your Claude.ai subscription does not cover API access)
+2. Open `backend/.env` and replace `your_key_here`:
+   ```
+   ANTHROPIC_API_KEY=sk-ant-...
+   ```
+3. In `backend/llm/claude.go`, follow the instructions in the comments to swap in the real implementation (the full code is preserved there, just commented out)
 
 ### 4. Run the backend
 
@@ -109,6 +122,3 @@ The frontend calls the backend over three endpoints:
 | `GET` | `/api/leads` | Return all leads ordered by date |
 | `PUT` | `/api/leads/{id}` | Update status for a single lead |
 
-## Note on the Claude API key
-
-The backend calls `https://api.anthropic.com/v1/messages` to extract lead data. This requires a separate API key from [console.anthropic.com](https://console.anthropic.com) — your Claude.ai subscription does not cover API access. Each extraction costs a fraction of a cent.
