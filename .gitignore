@@ -1,6 +1,7 @@
 # Backend
 backend/.env
 backend/str-leads
+backend/server
 
 # Frontend
 frontend/node_modules/
