@@ -4,8 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"html"
 	"io"
 	"net/http"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"str-leads/backend/db"
@@ -17,6 +21,44 @@ var validStatuses = map[string]bool{
 	"New":       true,
 	"Contacted": true,
 	"No Answer": true,
+}
+
+var (
+	tagRe   = regexp.MustCompile(`<[^>]+>`)
+	spaceRe = regexp.MustCompile(`\s+`)
+)
+
+// stripHTML removes HTML tags, decodes entities, and collapses whitespace.
+// This keeps Claude's prompt short and focused on actual listing text.
+func stripHTML(raw string) string {
+	s := tagRe.ReplaceAllString(raw, " ")
+	s = html.UnescapeString(s)
+	s = spaceRe.ReplaceAllString(s, " ")
+	return strings.TrimSpace(s)
+}
+
+// fetchURL fetches a URL with a 10-second timeout and returns the stripped text.
+func fetchURL(ctx context.Context, url string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; STRLeadBot/1.0)")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return stripHTML(string(b)), nil
 }
 
 func CORS(next http.Handler) http.Handler {
@@ -38,6 +80,11 @@ func Scrape(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !scrapeRateLimiter.allow(clientIP(r)) {
+		writeError(w, http.StatusTooManyRequests, "rate limit exceeded: max 10 requests per minute")
+		return
+	}
+
 	var body struct {
 		URL     string `json:"url"`
 		RawText string `json:"raw_text"`
@@ -49,18 +96,12 @@ func Scrape(w http.ResponseWriter, r *http.Request) {
 
 	var text string
 	if body.URL != "" {
-		resp, err := http.Get(body.URL) //nolint:noctx
+		var err error
+		text, err = fetchURL(r.Context(), body.URL)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to fetch URL: "+err.Error())
 			return
 		}
-		defer resp.Body.Close()
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to read URL: "+err.Error())
-			return
-		}
-		text = string(b)
 	} else {
 		text = body.RawText
 	}

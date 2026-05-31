@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getLeads, Lead } from './lib/api'
 import InputPanel from './components/InputPanel'
 import LeadsTable from './components/LeadsTable'
+import FilterBar, { exportCSV } from './components/FilterBar'
 
 export default function App() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [filterStrategy, setFilterStrategy] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
 
   async function fetchLeads() {
     try {
@@ -17,13 +21,24 @@ export default function App() {
 
   useEffect(() => { fetchLeads() }, [])
 
-  function onSuccess() {
-    fetchLeads()
-  }
+  function onSuccess() { fetchLeads() }
 
   function onStatusChange(id: string, status: string) {
     setLeads(prev => prev.map(l => l.id === id ? { ...l, status: status as Lead['status'] } : l))
   }
+
+  const filteredLeads = useMemo(() => {
+    const q = search.toLowerCase()
+    return leads.filter(l => {
+      if (filterStrategy && l.strategy !== filterStrategy) return false
+      if (filterStatus && l.status !== filterStatus) return false
+      if (q) {
+        const hay = [l.name, l.phone, l.email, l.address].join(' ').toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
+  }, [leads, search, filterStrategy, filterStatus])
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -42,7 +57,20 @@ export default function App() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
           {loading
             ? <p style={{ color: '#9ca3af', fontSize: '14px' }}>Loading leads...</p>
-            : <LeadsTable leads={leads} onStatusChange={onStatusChange} />
+            : <>
+                <FilterBar
+                  search={search}
+                  strategy={filterStrategy}
+                  status={filterStatus}
+                  count={filteredLeads.length}
+                  total={leads.length}
+                  onSearch={setSearch}
+                  onStrategy={setFilterStrategy}
+                  onStatus={setFilterStatus}
+                  onExport={() => exportCSV(filteredLeads)}
+                />
+                <LeadsTable leads={filteredLeads} onStatusChange={onStatusChange} />
+              </>
           }
         </div>
       </div>
